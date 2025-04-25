@@ -17,13 +17,15 @@ def get_all_recipes():
             for ingredient in row['Ingredients']:
                 ingredient_matches = ingredient_regex.match(ingredient)
                 try:
-                    ingredients.append({
-                        'quantity': float(ingredient_matches['quantity']),
-                        'unit': unit if (unit := ingredient_matches['unit']) else None,
-                        'name': ingredient_matches['name'],
-                    })
+                    quantity = float(ingredient_matches['quantity'])
                 except ValueError as exception:
-                    print(f"Error parsing ingredient: {ingredient}")
+                    print("Error parsing ingredient:", ingredient)
+                    quantity = None
+                ingredients.append({
+                    'quantity': quantity,
+                    'unit': unit if (unit := ingredient_matches['unit']) else None,
+                    'name': ingredient_matches['name'],
+                })
             row['Ingredients'] = ingredients
             all_recipes.append(row)
         json.dump(all_recipes, jsonfile)
@@ -33,4 +35,4 @@ def get_all_recipes():
 
 if __name__ == '__main__':
     recipes = get_all_recipes()
-    print(recipe
+    print(recipes)
