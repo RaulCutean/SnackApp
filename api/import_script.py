@@ -16,8 +16,13 @@ def get_all_recipes():
             ingredients = []
             for ingredient in row['Ingredients']:
                 ingredient_matches = ingredient_regex.match(ingredient)
+                try:
+                    quantity = float(ingredient_matches['quantity'])
+                except ValueError as exception:
+                    print("Error parsing ingredient:", ingredient)
+                    quantity = None
                 ingredients.append({
-                    'quantity': ingredient_matches['quantity'],
+                    'quantity': quantity,
                     'unit': unit if (unit := ingredient_matches['unit']) else None,
                     'name': ingredient_matches['name'],
                 })
