@@ -180,6 +180,7 @@ def get_recipe(recipe_id):
 
 @app.route("/api/recipes" , methods = ["POST"])
 def create_recipe():
+    return None
 
 
 if __name__ == '__main__':
