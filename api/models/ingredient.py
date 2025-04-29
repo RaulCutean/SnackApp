@@ -11,4 +11,4 @@ class Ingredient(db.Model):
 
     recipe_id = db.Column(db.Integer, db.ForeignKey('recipe.id'), nullable=False)
 
-    recipe = db.relationship("Recipe" , backref = db.backref("ingredients", lazy="True"))
+    recipe = db.relationship("Recipe" , backref = db.backref("ingredients", lazy=True))

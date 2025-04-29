@@ -1,4 +1,4 @@
-from flask import Flask , jsonify
+from flask import Flask, jsonify, Request, Response, request
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -178,9 +178,39 @@ def get_recipe(recipe_id):
             return jsonify(recipe)
     return jsonify({"error": "Recipe not found"}) , 404
 
+#tema validare
 @app.route("/api/recipes" , methods = ["POST"])
 def create_recipe():
-    return None
+    new_recipe = {
+        "id": len(recipes) + 1,
+        "name": request.json.get("name"),
+        "duration": request.json.get("duration") ,
+        "pictures": request.json.get("pictures") ,
+        "instructions": request.json.get("instructions") ,
+        "ingredients": request.json.get("ingredients") ,
+        "categories": request.json.get("categories") ,
+    }
+    recipes.append(new_recipe)
+    return jsonify(new_recipe), 201
+
+@app.route("/api/recipes/<int:recipe_id>" , methods = ["DELETE"])
+def delete_recipe(recipe_id):
+    for recipe in recipes:
+        if recipe.get("id") == recipe_id:
+             recipes.remove(recipe)
+             return jsonify(recipe), 200
+
+    return jsonify({"error" : "Recipe not found"}) , 404
+
+@app.route("/api/recipes/<int:recipe_id>" , methods = ["PUT"])
+def update_recipe(recipe_id):
+    
+    for recipe in recipes :
+        if recipe.get("id") == recipe_id:
+            for key in recipe.keys():
+                if key == "id":
+                    continue
+                recipe[key] = name if (name := request.json.get(key)) else recipe[key]
 
 
 if __name__ == '__main__':
