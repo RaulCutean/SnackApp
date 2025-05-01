@@ -1,5 +1,6 @@
 from flask import Flask, jsonify, Request, Response, request
 from dotenv import load_dotenv
+from itsdangerous import NoneAlgorithm
 
 load_dotenv()
 from config import Config
@@ -23,30 +24,55 @@ def hello_world():
 def get_recipes():
     recipes = []
     for recipe in db.session.query(Recipe).all():
-        recipes.append(recipe.as_dict())
-    return jsonify(recipes)
+        ingredients = []
+        dict_recipe = recipe.as_dict()
+        dict_recipe["pictures"] = [picture for picture in dict_recipe["pictures"].split(",")]
+        for ingredient in db.session.query(Ingredient).all():
+            if ingredient.recipe_id == dict_recipe["id"]:
+                ingredients.append(ingredient.as_dict())
+                # print(f"{ingredient.name} : {dict_recipe["name"]}")
+        dict_recipe["ingredients"] = ingredients
+        # print(dict_recipe)
+        recipes.append(dict_recipe)
+    if len(recipes) == 0 :
+        return jsonify({'recipes': []}) , 200
+    return jsonify(recipes) , 200
 
 @app.route("/api/recipes/<int:recipe_id>" , methods = ['GET'])
 def get_recipe(recipe_id):
     for recipe in db.session.query(Recipe).all():
         if recipe.as_dict().get("id") == recipe_id:
-            return jsonify(recipe.as_dict())
+            dict_recipe = recipe.as_dict()
+            dict_recipe["pictures"] = [picture for picture in dict_recipe["pictures"].split(",")]
+            ingredients = []
+            for ingredient in db.session.query(Ingredient).all():
+                if ingredient.recipe_id == dict_recipe["id"]:
+                    ingredients.append(ingredient.as_dict())
+                    dict_recipe["ingredients"] = ingredients
+            return jsonify(dict_recipe)
+
     return jsonify({"error": "Recipe not found"}) , 404
 
-#tema validare
+#tema validate
+def validate(*args):
+    for arg in args:
+        if arg is None:
+            return False
+    return True
 @app.route("/api/recipes" , methods = ["POST"])
 def create_recipe():
-    new_recipe = {
-        "id": len(recipes) + 1,
-        "name": request.json.get("name"),
-        "duration": request.json.get("duration") ,
-        "pictures": request.json.get("pictures") ,
-        "instructions": request.json.get("instructions") ,
-        "ingredients": request.json.get("ingredients") ,
-        "categories": request.json.get("categories") ,
-    }
-    recipes.append(new_recipe)
-    return jsonify(new_recipe), 201
+    if not validate(request.json.get("name"),request.json.get("duration"),request.json.get("pictures"), request.json.get("instructions")):
+        return jsonify({"error": "Bad request"}), 400
+    print(request.json.get("name"))
+    recipe = Recipe(
+        name = request.json.get("name"),
+        duration = request.json.get("duration"),
+        pictures = ",".join(request.json.get("pictures")),
+        instructions = request.json.get("instructions"),
+    )
+    db.session.add(recipe)
+    # recipes.append(new_recipe)
+    return jsonify(recipe.as_dict()), 201
 
 @app.route("/api/recipes/<int:recipe_id>" , methods = ["DELETE"])
 def delete_recipe(recipe_id):
