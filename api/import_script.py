@@ -39,7 +39,6 @@ def get_all_recipes():
             recipes.append(row)
         # Write processed dict to JSON file
         json.dump(recipes, jsonfile)
-
     return recipes
 
 
