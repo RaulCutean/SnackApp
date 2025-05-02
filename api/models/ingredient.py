@@ -11,7 +11,7 @@ class Ingredient(db.Model):
 
     recipe_id = db.Column(db.Integer, db.ForeignKey('recipe.id'), nullable=False)
 
-    recipe = db.relationship("Recipe" , backref = db.backref("ingredients", lazy=True))
+    recipe = db.relationship("Recipe" , backref = db.backref("ingredients", lazy=True , cascade = "all, delete-orphan"))
 
     def as_dict(self):
         return {col.name: getattr(self, col.name) for col in self.__table__.columns}
