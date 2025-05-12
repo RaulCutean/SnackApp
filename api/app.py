@@ -153,7 +153,7 @@ def update_recipe(recipe_id):
                     setattr(ingredient, k, v)
 
     db.session.commit()
-    return jsonify(recipe.as_dict()), 204
+    return None, 204
 
 
 @app.route("/api/categories", methods=["GET"])

@@ -225,3 +225,25 @@
 #         db.create_all()
 #     app.run(debug=True)
 #
+
+
+# for recipe_cat in db.session.query(recipe_category).all():
+#                if recipe_cat.recipe_id == dict_recipe["id"]:
+#                    categories_id.append(recipe_cat.category_id)
+#            for id in categories_id:
+#                for category in db.session.query(Category).all():
+#                    if category.id == id:
+#                        categories.append(category.name)
+# ingredients = []
+
+# for ingredient in db.session.query(Ingredient).all():
+#     if ingredient.recipe_id == dict_recipe["id"]:
+#         ingredients.append(ingredient.as_dict())
+# print(f"{ingredient.name} : {dict_recipe["name"]}")
+# dict_recipe["ingredients"] = ingredients
+
+# def validate_helper(dictionary , fields):
+#     for key in dictionary:
+#         if key not in fields and dictionary[key] is None:
+#             return False
+#     return True
