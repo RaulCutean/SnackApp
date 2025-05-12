@@ -15,4 +15,6 @@ class Recipe(db.Model):
     categories = db.relationship("Category", secondary=recipe_category , backref = db.backref("recipes", lazy="dynamic"))
 
     def as_dict(self):
-        return {col.name: getattr(self , col.name) for col in self.__table__.columns}
+        dict_recipe = {col.name: getattr(self , col.name) for col in self.__table__.columns}
+        dict_recipe["pictures"] = [picture for picture in self.pictures.split(",")]
+        return dict_recipe
