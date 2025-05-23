@@ -1,6 +1,8 @@
 from flask import Flask, jsonify, Request, Response, request
 from dotenv import load_dotenv
 
+from import_script import get_all_recipes, populate_db
+
 load_dotenv()
 from config import Config
 from models import db
@@ -13,6 +15,24 @@ from models.ingredient import Ingredient
 app = Flask(__name__)
 app.config.from_object(Config)
 db.init_app(app)
+
+ERROR404_RESPONSE = {'error': 'recipe not found'}
+
+
+def add_ingredients_to_db(ingredients, recipe_id):
+    for ing in ingredients:
+        try:
+            quantity = float(ing['quantity'])
+        except ValueError as exc:
+            return jsonify({'error': f'quantity is not of type float: {exc}'}), 400
+
+        ingredient = Ingredient(
+            name=ing['name'],
+            quantity=quantity,
+            unit=ing['unit'],
+            recipe_id=recipe_id,
+        )
+        db.session.add(ingredient)
 
 
 @app.route('/')
@@ -80,30 +100,42 @@ def get_recipe(recipe_id):
 @app.route("/api/recipes", methods=["POST"])
 def create_recipe():
     data = request.get_json()
-    fields = ["name", "duration", "instructions", "pictures", "categories"]
+    fields = ["name", "duration", "instructions", "pictures", "categories" , "ingredients"]
+
     for field in fields:
         if data.get(field) is None:
             return jsonify({"error": f"Field {field} not found."}), 404
-
-    category_objs = []
-    for category_name in data.get("categories"):
-        category = Category.query.filter_by(name=category_name).first()
-        if not category:
-            category = Category(
-                name=category_name,
-                color=CATEGORY_COLORS[category_name],
-            )
-        category_objs.append(category)
-    recipe = Recipe(
-        name=request.json.get("name"),
-        duration=request.json.get("duration"),
-        pictures=",".join(request.json.get("pictures")),
-        instructions=request.json.get("instructions"),
-        categories=category_objs
-    )
-    db.session.add(recipe)
-    db.session.commit()
-    return jsonify(recipe.as_dict()), 201
+    pictures = data.get("pictures")
+    if not pictures or not isinstance(pictures, list):
+        return jsonify({"error": "pictures field is required"}), 400
+    for cat in data['categories']:
+        if 'name' not in cat:
+            return jsonify({'error': 'categories must contain a name'}), 400
+    for ing in data['ingredients']:
+        if 'name' not in ing or 'quantity' not in ing:
+            return jsonify({'error': 'ingredients must contain a name, quantity and unit (optional)'}), 400
+    try:
+        category_objs = []
+        for cat in data.get("categories"):
+            category = Category.query.filter_by(name=cat["name"]).first()
+            if not category:
+                return jsonify({"error": f"category {cat["name"]} not found"}), 400
+            category_objs.append(category)
+        recipe = Recipe(
+            name=request.json.get("name"),
+            duration=request.json.get("duration"),
+            pictures=",".join(request.json.get("pictures")),
+            instructions=request.json.get("instructions"),
+            categories=category_objs
+        )
+        db.session.add(recipe)
+        db.session.flush()
+        add_ingredients_to_db(data['ingredients'], recipe.id)
+        db.session.commit()
+        return jsonify(recipe.as_dict()), 201
+    except Exception as exc:
+        db.session.rollback()
+        return jsonify({'error': f'something went wrong: {exc}'}), 500
 
 
 @app.route("/api/recipes/<int:recipe_id>", methods=["DELETE"])
@@ -113,47 +145,41 @@ def delete_recipe(recipe_id):
         return jsonify({"error": "Not found"}), 404
     db.session.delete(recipe)
     db.session.commit()
-    return None, 204
+    return {}, 204
 
 
-@app.route("/api/recipes/<int:recipe_id>", methods=["PUT"])
+
+@app.route('/api/recipes/<int:recipe_id>', methods=['PUT'])
 def update_recipe(recipe_id):
-    data = request.get_json()
+    try:
+        recipe = Recipe.query.get(recipe_id)
+        if not recipe:
+            return jsonify(ERROR404_RESPONSE), 404
 
-    recipe = db.session.get(Recipe, recipe_id)
+        recipe.name = new_name if (new_name := request.json.get('name')) else recipe.name
+        recipe.duration = new_duration if (new_duration := request.json.get('duration')) else recipe.duration
+        recipe.pictures = new_pictures if (new_pictures := request.json.get('pictures')) else recipe.pictures
+        recipe.instructions = new_instr if (new_instr := request.json.get('instructions')) else recipe.instructions
 
-    for key in data.keys():
-        if key not in ["ingredients", "categories"]:
-            setattr(recipe, key, data[key])
+        if new_categories := request.json.get('categories'):
+            category_objs = []
+            for cat in new_categories:
+                category = Category.query.filter_by(name=cat['name']).first()
+                if not category:
+                    return jsonify({'error': f'category {cat["name"]} not found'}), 400
+                category_objs.append(category)
+            recipe.categories = category_objs
 
-    if "categories" in data:
-        updated_categories = []
-        for category_data in data["categories"]:
-            category = Category.query.filter_by(name=category_data["name"]).first()
-            if not category:
-                category = Category(name=category_data["name"], color=category_data["color"])
-                db.session.add(category)
-            else:
-                for k, v in category_data.items():
-                    setattr(category, k, v)
-            updated_categories.append(category)
-        recipe.categories = updated_categories
+        if new_ingredients := request.json.get('ingredients'):
+            Ingredient.query.filter_by(recipe_id=recipe_id).delete()
+            add_ingredients_to_db(new_ingredients, recipe.id)
 
-    if "ingredients" in data:
-        for ingredient_data in data["ingredients"]:
-            ingredient = Ingredient.query.filter_by(name=ingredient_data["name"]).first()
-            if not ingredient:
-                ingredient = Ingredient(name=ingredient_data["name"]
-                                        , quantity=ingredient_data["quantity"]
-                                        , unit=ingredient_data["unit"]
-                                        , recipe_id=recipe_id)
-                db.session.add(ingredient)
-            else:
-                for k, v in ingredient_data.items():
-                    setattr(ingredient, k, v)
-
-    db.session.commit()
-    return None, 204
+        db.session.commit()
+        print(f'Updated recipe: {recipe.name}')
+        return jsonify(recipe.as_dict()), 201
+    except Exception as exc:
+        db.session.rollback()
+        return jsonify({'error': f'something went wrong: {exc}'}), 500
 
 
 @app.route("/api/categories", methods=["GET"])
@@ -184,5 +210,7 @@ def create_category():
 
 if __name__ == '__main__':
     with app.app_context():
+        db.drop_all()
         db.create_all()
-        app.run(debug=True)
+        populate_db(get_all_recipes(), app, db)
+    app.run(host="0.0.0.0", debug=True, port=5000)
