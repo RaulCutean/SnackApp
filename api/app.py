@@ -1,6 +1,6 @@
 from flask import Flask, jsonify, Request, Response, request
 from dotenv import load_dotenv
-
+from flask_cors import CORS
 from import_script import get_all_recipes, populate_db
 
 load_dotenv()
@@ -15,6 +15,9 @@ from models.ingredient import Ingredient
 app = Flask(__name__)
 app.config.from_object(Config)
 db.init_app(app)
+
+
+CORS(app , origins=[Config.APP_URL or '*'])
 
 ERROR404_RESPONSE = {'error': 'recipe not found'}
 
