@@ -2,10 +2,12 @@ import React from 'react';
 import { Outlet } from "react-router";
 import {Navbar} from "../Navbar/Navbar.jsx";
 
-const LayoutOutlet = () => {
+const LayoutOutlet = (props) => {
     return (
         <div>
-            <Navbar />
+            <Navbar handleOpenCategoryModal={props.handleOpenCategoryModal}
+                    handleOpenRecipeModal={props.handleOpenRecipeModal}
+            />
             <Outlet />
         </div>
     );

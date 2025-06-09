@@ -1,8 +1,12 @@
-nav{
+nav {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    div {
-        font-size: 32px;
+    div.logo {
+        font-size: 2rem;
+    }
+
+    button {
+        color: white;
     }
 }
