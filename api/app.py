@@ -1,6 +1,6 @@
 from flask import Flask, jsonify, Request, Response, request
 from dotenv import load_dotenv
-
+from flask_cors import CORS
 from import_script import get_all_recipes, populate_db
 
 load_dotenv()
@@ -15,6 +15,9 @@ from models.ingredient import Ingredient
 app = Flask(__name__)
 app.config.from_object(Config)
 db.init_app(app)
+
+
+CORS(app , origins=[Config.APP_URL or '*'])
 
 ERROR404_RESPONSE = {'error': 'recipe not found'}
 
@@ -70,12 +73,13 @@ def get_recipes():
         categories = []
 
         dict_recipe["ingredients"] = [ingredient.as_dict() for ingredient in recipe.ingredients]
-
+        cat_obj = []
         categories = get_categories_helper(dict_recipe["id"], categories)
-        dict_recipe["categories"] = categories
-
+        for category in categories:
+            cat_obj.append(Category.query.filter_by(name=category).first().as_dict())
+        # print(cat_obj)
+        dict_recipe["categories"] = cat_obj
         recipes.append(dict_recipe)
-
     return jsonify(recipes), 200
 
 
@@ -87,10 +91,14 @@ def get_recipe(recipe_id):
 
             dict_recipe["ingredients"] = [ingredient.as_dict() for ingredient in recipe.ingredients]
 
-            categories = []
-            categories = get_categories_helper(dict_recipe["id"], categories)
 
-            dict_recipe["categories"] = categories
+            categories = []
+            category_object = []
+            categories = get_categories_helper(dict_recipe["id"], categories)
+            for category in categories:
+                category_object.append(Category.query.filter_by(name=category).first().as_dict())
+
+            dict_recipe["categories"] = category_object
 
             return jsonify(dict_recipe)
 
